@@ -1,0 +1,62 @@
+.page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 24px 16px 64px;
+  font-family: system-ui, -apple-system, "PingFang TC", "Microsoft JhengHei", sans-serif;
+}
+
+header h1 {
+  margin-bottom: 4px;
+}
+
+.disclaimer {
+  color: #6b7280;
+  font-size: 0.85rem;
+  margin-top: 0;
+}
+
+.panel {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin-bottom: 16px;
+}
+
+.panel h2 {
+  margin-top: 0;
+  font-size: 1.1rem;
+}
+
+.controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.controls input {
+  padding: 8px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.95rem;
+}
+
+.controls button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  background: #2563eb;
+  color: #fff;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.controls button:disabled {
+  background: #93c5fd;
+  cursor: not-allowed;
+}
+
+.status {
+  color: #374151;
+  font-size: 0.9rem;
+}
