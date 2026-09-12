@@ -1,20 +1,21 @@
 const API_BASE = "http://localhost:8000";
 
+async function throwForStatus(res) {
+  const body = await res.json().catch(() => ({}));
+  const err = new Error(body.detail || `請求失敗 (${res.status})`);
+  err.status = res.status;
+  throw err;
+}
+
 async function request(path) {
   const res = await fetch(`${API_BASE}${path}`);
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.detail || `請求失敗 (${res.status})`);
-  }
+  if (!res.ok) await throwForStatus(res);
   return res.json();
 }
 
 async function post(path) {
   const res = await fetch(`${API_BASE}${path}`, { method: "POST" });
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.detail || `請求失敗 (${res.status})`);
-  }
+  if (!res.ok) await throwForStatus(res);
   return res.json();
 }
 
@@ -32,4 +33,24 @@ export function fetchInstitutionalFlow(tradeDate) {
 
 export function fetchChipData(tradeDate) {
   return post(`/api/chip-data/fetch?trade_date=${tradeDate}`);
+}
+
+export function getOpinions(stockId) {
+  return request(`/api/opinions?stock_id=${stockId}`);
+}
+
+export function getNews(stockId) {
+  return request(`/api/news?stock_id=${stockId}`);
+}
+
+export function listInfluencers() {
+  return request(`/api/influencers`);
+}
+
+export function scrapeInfluencer(influencerId) {
+  return post(`/api/influencers/${influencerId}/scrape`);
+}
+
+export function fetchNews() {
+  return post(`/api/news/fetch`);
 }

@@ -32,6 +32,7 @@ header h1 {
   display: flex;
   gap: 8px;
   align-items: center;
+  flex-wrap: wrap;
 }
 
 .controls input {
@@ -59,4 +60,63 @@ header h1 {
 .status {
   color: #374151;
   font-size: 0.9rem;
+}
+
+.empty-hint {
+  color: #9ca3af;
+  font-size: 0.9rem;
+}
+
+.card-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.card {
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 12px 14px;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.card-source {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.card-date {
+  margin-left: auto;
+  color: #9ca3af;
+  font-size: 0.8rem;
+}
+
+.card-title {
+  font-weight: 600;
+  margin: 0 0 4px;
+}
+
+.card-summary {
+  color: #374151;
+  margin: 0 0 6px;
+  font-size: 0.9rem;
+}
+
+.card-link {
+  font-size: 0.85rem;
+  color: #2563eb;
+  text-decoration: none;
+}
+
+.card-link:hover {
+  text-decoration: underline;
 }

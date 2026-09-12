@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import Base, SessionLocal, engine
 from app.models import Influencer
-from app.routers import chip_data, influencers, institutional_flow, opinions
+from app.routers import chip_data, influencers, institutional_flow, news, opinions
 
 Base.metadata.create_all(bind=engine)
 
@@ -41,6 +41,7 @@ app.include_router(institutional_flow.router)
 app.include_router(chip_data.router)
 app.include_router(influencers.router)
 app.include_router(opinions.router)
+app.include_router(news.router)
 
 
 @app.get("/")

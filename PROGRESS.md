@@ -4,47 +4,41 @@
 
 ## 目前完成到哪個模組
 
-1. ✅ 資金流向 — TWSE OpenAPI (T86) 三大法人買賣超，FastAPI + SQLite，端點：
-   `POST/GET /api/institutional-flow`
-2. ✅ 籌碼面 — TWSE OpenAPI (MI_MARGN) 融資融券餘額，端點：`POST/GET /api/chip-data`
+1. ✅ 資金流向 — TWSE OpenAPI (T86)，端點：`POST/GET /api/institutional-flow`
+2. ✅ 籌碼面 — TWSE OpenAPI (MI_MARGN)，端點：`POST/GET /api/chip-data`
    （大戶持股比例尚未做，需另外爬蟲或 FinMind，先跳過）
-3. ✅ React 前端 MVP — 日期抓取＋股票查詢＋兩張圖表，本機可跑（`frontend/`，
-   `npm run dev`）
-4. ✅ 意見領袖模組（Chris／Threads）— Playwright 爬蟲＋Claude API 分類，
-   端點：`POST /api/influencers/{id}/scrape`、`GET /api/influencers/{id}/opinions`、
-   `GET /api/opinions?stock_id=`
-5. ⬜ 新聞模組（尚未開始）
-6. ⬜ 整合單一 Dashboard（搜尋框輸入股票代號 → 四合一報告，尚未開始）
+3. ✅ React 前端 — 已整合成單一 Dashboard
+4. ✅ 意見領袖模組（Chris／Threads）— Playwright + Claude API 分類
+5. ✅ 新聞模組 — Yahoo 股市 RSS + LLM 篩選個股相關性、正負面標記、摘要
+6. ✅ 整合單一 Dashboard — 搜尋框輸入股票代號 → 四合一報告（資金流向／籌碼面／
+   意見領袖／新聞），任一區塊沒資料不影響其他區塊顯示
 7. ⬜ 老王／股乾爹／股海老牛 三位意見領袖尚未加入（架構已支援，用
    `POST /api/influencers` 建新的人物主檔即可）
+8. ⬜ 鉅亨網新聞來源尚未加入（目前只有 Yahoo 股市，找不到穩定公開 RSS）
 
 ## 下一步
 
-照開發順序，下一步是「⑤ 新聞模組」：財經新聞 RSS（鉅亨網、Yahoo 股市等）
-＋ LLM 正負面標記＋一句話摘要＋卡片式列表呈現。
+CLAUDE.md 列的四大核心方向（資金流向、籌碼面、意見領袖、新聞）都已經有 MVP，
+整合 Dashboard 也做完了。可以考慮的方向：
+- 大戶持股比例（集保股權分散表，週更）
+- 新增第二、三位意見領袖
+- 排程自動化（APScheduler 每日盤後自動抓取，不用手動按按鈕）
+- 免責聲明／法遵文字加到前端頁面上
 
 ## 這次 session 的關鍵技術決策
 
-- **TWSE T86 API 的 `selectType` 要用 `ALLBUT0999`**，不能用 `ALL`——`ALL`
-  會把上萬檔權證、牛熊證也一起抓進來（一天變 15000+ 筆），`ALLBUT0999`
-  才是正確的「上市股票＋ETF」範圍（約 1200~1300 檔）。
-- **MI_MARGN 的融資／融券欄位名稱是重複的**（買進/賣出/前日餘額/今日餘額
-  兩邊都同名），沒辦法用欄位名稱對應，改用固定 index，並加一個欄位清單比對，
-  格式一旦跟預期不同就直接報錯，避免 TWSE 改格式時默默解析出錯資料。
-- **這台機器的 npm 有嚴重的環境問題**：npm 內部 DNS 查詢多傳了 `ADDRCONFIG`
-  選項會導致查詢失敗（`ENOTFOUND`/`ENOENT`），跟 IPv6 開關無關（原本懷疑
-  IPv6、繞了一圈是錯的）。已經用一個 Node 啟動腳本永久修好（`NODE_OPTIONS`
-  環境變數 + `C:\Users\Vic_Fan\.node-fix\force-ipv4-dns.cjs`），以後
-  `npm install` 不會再卡住。
-- **Threads 沒有可用的公開 API**，發文內容要靠 JS 動態渲染，且背後的
-  GraphQL 端點有簽章防護抓不到。改用 Playwright 開真的無頭瀏覽器載入頁面，
-  再用「DOM 結構往上爬到剛好只包住一篇貼文」的方式擷取文字（不依賴
-  Threads 會變動的 class name），未登入狀態下可以抓到最近 5 篇貼文。
-- **意見資料用 `opinion_data` + `opinion_stocks` 兩張表**（一對多），因為
-  一篇貼文常常提到好幾檔股票，這樣才能乾淨地做「查某檔股票被哪些人在
-  哪些時間點提到」的查詢。
-- **LLM 分類用 Claude 的 tool use（結構化輸出）**而不是要求它輸出 JSON
-  文字再自己 parse，避免格式跑掉的問題；實測連公司名對應股票代號都能
-  正確判斷（例如「金居」→ 8358）。
-- **API 金鑰管理**：`backend/.env.example` 放假的佔位符（會被 git 追蹤），
-  真正的金鑰放 `backend/.env`（已被 `.gitignore` 排除）。
+- **新聞篩選策略**：不做假新聞偵測，靠來源白名單（Yahoo 股市正規財經媒體）
+  保證真實性；用「標題相似度去重」（difflib，門檻 0.75，比對近 3 天）過濾
+  重複報導；LLM 判斷「是否明確跟具體股票有關」，不相關的直接不存，解決
+  「新聞太多、雜訊高」的問題。這是先做的簡單版本，代價是同一批不相關新聞
+  每次重抓都會重新問一次 LLM（不會重複存，只是重複判斷），之後真的在意
+  花費可以再加一張「已檢查但不相關」的記錄表。
+- **前端四合一整合用 Promise.all + 每支 API 各自 catch 404**：資金流向／
+  籌碼面用 `/{stock_id}` 端點，查無資料時後端回 404；如果四支 API 全部包在
+  同一個 try/catch，任一支 404 就會讓整頁查詢「失敗」、什麼都不顯示。改成
+  幫 404 單獨包一層轉成空陣列，四個區塊才能各自獨立顯示「尚無資料」而不會
+  互相拖累。
+- **`GET /api/opinions` 要額外組 influencer_name**：Pydantic 的
+  `from_attributes=True` 沒辦法直接抓到跨表 join 的欄位，要在 router 裡手動
+  組出帶 `influencer_name` 的物件（沿用資金流向/籌碼面查詢已经用過的
+  `WithNameOut` 命名習慣）。

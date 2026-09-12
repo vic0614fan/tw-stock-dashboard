@@ -70,7 +70,39 @@ class OpinionDataOut(BaseModel):
     stocks: list[OpinionStockOut]
 
 
+class OpinionDataWithInfluencerOut(OpinionDataOut):
+    influencer_name: str
+
+
 class ScrapeResult(BaseModel):
     posts_found: int
     opinions_saved: int
     opinions_skipped_existing: int
+
+
+class NewsStockOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    stock_id: str
+
+
+class NewsDataOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    source: str
+    title: str
+    url: str
+    published_at: datetime | None
+    scraped_at: datetime
+    summary: str
+    sentiment: str
+    stocks: list[NewsStockOut]
+
+
+class FetchNewsResult(BaseModel):
+    items_fetched: int
+    items_saved: int
+    items_skipped_duplicate_url: int
+    items_skipped_similar_title: int
+    items_skipped_not_stock_relevant: int

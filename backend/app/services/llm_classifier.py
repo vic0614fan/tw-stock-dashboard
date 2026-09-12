@@ -37,11 +37,48 @@ _CLASSIFY_TOOL = {
 }
 
 
+_CLASSIFY_NEWS_TOOL = {
+    "name": "classify_news",
+    "description": "判斷一則財經新聞是否明確跟具體台股個股有關，若有關則標記正負面情緒、摘要重點、標記股票代號",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "is_stock_relevant": {
+                "type": "boolean",
+                "description": "這則新聞是否明確跟一檔或多檔具體上市股票有關（大盤總經、產業趨勢但沒點名個股算 false）",
+            },
+            "sentiment": {
+                "type": "string",
+                "enum": ["正面", "負面", "中性"],
+                "description": "這則新聞對其提到的個股而言是正面、負面還是中性消息",
+            },
+            "summary": {
+                "type": "string",
+                "description": "一句話摘要這則新聞的重點（繁體中文，30字以內）",
+            },
+            "stocks": {
+                "type": "array",
+                "description": "新聞中明確提到的台股個股",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "stock_id": {"type": "string", "description": "股票代號，例如 2330"},
+                        "name": {"type": "string", "description": "股票名稱，例如 台積電"},
+                    },
+                    "required": ["stock_id", "name"],
+                },
+            },
+        },
+        "required": ["is_stock_relevant", "sentiment", "summary", "stocks"],
+    },
+}
+
+
 class LLMNotConfiguredError(Exception):
     """尚未設定 ANTHROPIC_API_KEY。"""
 
 
-def classify_opinion(content: str) -> dict:
+def _classify(tool: dict, content: str) -> dict:
     if not ANTHROPIC_API_KEY:
         raise LLMNotConfiguredError("尚未設定 ANTHROPIC_API_KEY，請在 backend/.env 中設定")
 
@@ -49,13 +86,22 @@ def classify_opinion(content: str) -> dict:
     response = client.messages.create(
         model=MODEL,
         max_tokens=1024,
-        tools=[_CLASSIFY_TOOL],
-        tool_choice={"type": "tool", "name": "classify_opinion"},
+        tools=[tool],
+        tool_choice={"type": "tool", "name": tool["name"]},
         messages=[{"role": "user", "content": content}],
     )
 
     for block in response.content:
-        if block.type == "tool_use" and block.name == "classify_opinion":
+        if block.type == "tool_use" and block.name == tool["name"]:
             return block.input
 
     raise RuntimeError("LLM 未回傳預期的分類結果")
+
+
+def classify_opinion(content: str) -> dict:
+    return _classify(_CLASSIFY_TOOL, content)
+
+
+def classify_news(title: str, description: str) -> dict:
+    content = f"標題：{title}\n內容：{description}"
+    return _classify(_CLASSIFY_NEWS_TOOL, content)

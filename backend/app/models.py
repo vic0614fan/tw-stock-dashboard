@@ -85,3 +85,32 @@ class OpinionStock(Base):
     stock_id = Column(String, nullable=False)  # 不設 FK 到 stocks，避免文章提到還沒抓過盤後資料的股票時寫入失敗
 
     opinion = relationship("OpinionData", back_populates="stocks")
+
+
+class NewsData(Base):
+    __tablename__ = "news_data"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    source = Column(String, nullable=False)  # 例如「yahoo_stock」
+    title = Column(String, nullable=False)
+    title_normalized = Column(String, nullable=False)  # 去除空白/標點後的標題，供相似度去重比對
+    url = Column(String, unique=True, nullable=False)
+    published_at = Column(DateTime, nullable=True)
+    scraped_at = Column(DateTime, nullable=False, server_default=func.now())
+
+    summary = Column(String, nullable=False)  # LLM 一句話摘要
+    sentiment = Column(String, nullable=False)  # 正面 / 負面 / 中性
+
+    stocks = relationship("NewsStock", back_populates="news")
+
+
+class NewsStock(Base):
+    __tablename__ = "news_stocks"
+    __table_args__ = (UniqueConstraint("news_id", "stock_id", name="uq_news_stock"),)
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    news_id = Column(Integer, ForeignKey("news_data.id"), nullable=False)
+    stock_id = Column(String, nullable=False)  # 不設 FK 到 stocks，理由同 OpinionStock
+
+    news = relationship("NewsData", back_populates="stocks")
