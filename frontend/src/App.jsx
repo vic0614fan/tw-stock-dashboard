@@ -5,8 +5,10 @@ import ChipDataChart from "./components/ChipDataChart";
 import ShareholdingChart from "./components/ShareholdingChart";
 import OpinionList from "./components/OpinionList";
 import NewsList from "./components/NewsList";
-import IndustrySentimentBars from "./components/IndustrySentimentBars";
+import SentimentBars from "./components/SentimentBars";
 import ConsensusFeed from "./components/ConsensusFeed";
+import InfluencerList from "./components/InfluencerList";
+import InfluencerProfile from "./components/InfluencerProfile";
 import {
   fetchChipData,
   fetchIndustry,
@@ -15,10 +17,12 @@ import {
   fetchShareholding,
   getChipData,
   getConsensus,
+  getInfluencerTimeline,
   getInstitutionalFlow,
   getNews,
   getOpinions,
   getShareholding,
+  getStockConsensus,
   listInfluencers,
   scrapeInfluencer,
 } from "./api";
@@ -50,11 +54,16 @@ function App() {
   const [shareholding, setShareholding] = useState(null);
   const [opinions, setOpinions] = useState(null);
   const [news, setNews] = useState(null);
+  const [stockConsensus, setStockConsensus] = useState(null);
   const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(false);
 
   const [consensus, setConsensus] = useState(null);
   const [consensusError, setConsensusError] = useState("");
+
+  const [influencers, setInfluencers] = useState([]);
+  const [activeInfluencerId, setActiveInfluencerId] = useState(null);
+  const [influencerTimeline, setInfluencerTimeline] = useState(null);
 
   async function loadConsensus() {
     try {
@@ -68,6 +77,7 @@ function App() {
 
   useEffect(() => {
     loadConsensus();
+    listInfluencers().then(setInfluencers).catch(() => {});
   }, []);
 
   async function handleFetchToday() {
@@ -93,8 +103,8 @@ function App() {
     setLoading(true);
     setStatus("正在抓取意見領袖最新貼文...");
     try {
-      const influencers = await listInfluencers();
-      const results = await Promise.all(influencers.map((i) => scrapeInfluencer(i.id)));
+      const list = await listInfluencers();
+      const results = await Promise.all(list.map((i) => scrapeInfluencer(i.id)));
       const saved = results.reduce((sum, r) => sum + r.opinions_saved, 0);
       setStatus(`抓取完成：新增 ${saved} 則意見`);
       await loadConsensus();
@@ -147,9 +157,11 @@ function App() {
     }
   }
 
-  async function handleSearch() {
-    const id = stockId.trim();
+  async function handleSearch(idOverride) {
+    const id = (idOverride ?? stockId).trim();
     if (!id) return;
+    setActiveInfluencerId(null);
+    setStockId(id);
     setLoading(true);
     setStatus("查詢中...");
     setFlowData(null);
@@ -157,25 +169,76 @@ function App() {
     setShareholding(null);
     setOpinions(null);
     setNews(null);
+    setStockConsensus(null);
     try {
-      const [flow, chip, shareholdingList, opinionList, newsList] = await Promise.all([
+      const [flow, chip, shareholdingList, opinionList, newsList, consensusResult] = await Promise.all([
         settleAsEmptyOn404(getInstitutionalFlow(id)),
         settleAsEmptyOn404(getChipData(id)),
         settleAsEmptyOn404(getShareholding(id)),
         settleAsEmptyOn404(getOpinions(id)),
         settleAsEmptyOn404(getNews(id)),
+        getStockConsensus(id),
       ]);
       setFlowData(flow);
       setChipData(chip);
       setShareholding(shareholdingList);
       setOpinions(opinionList);
       setNews(newsList);
+      setStockConsensus(consensusResult);
       setStatus("");
     } catch (e) {
       setStatus(`查詢失敗：${e.message}`);
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handleSelectInfluencer(id) {
+    setActiveInfluencerId(id);
+    setInfluencerTimeline(null);
+    try {
+      const data = await getInfluencerTimeline(id);
+      setInfluencerTimeline(data);
+    } catch (e) {
+      setStatus(`載入意見領袖資料失敗：${e.message}`);
+    }
+  }
+
+  const industryItems = (consensus?.industry_sentiment || []).map((i) => ({
+    key: i.industry,
+    label: i.industry,
+    bullish: i.bullish,
+    bearish: i.bearish,
+    neutral: i.neutral,
+    total: i.total,
+  }));
+
+  const stockItems = (consensus?.stock_sentiment || []).map((s) => ({
+    key: s.stock_id,
+    label: `${s.stock_name || s.stock_id}（${s.stock_id}）`,
+    bullish: s.bullish,
+    bearish: s.bearish,
+    neutral: s.neutral,
+    total: s.total,
+    divergent: s.has_divergence,
+    stock_id: s.stock_id,
+  }));
+
+  if (activeInfluencerId && influencerTimeline) {
+    return (
+      <div className="page">
+        <header>
+          <h1>台股盤後分析工具</h1>
+          <p className="disclaimer">僅供公開資訊整理，非投資建議</p>
+        </header>
+        <section className="panel">
+          <InfluencerProfile
+            timeline={influencerTimeline}
+            onBack={() => setActiveInfluencerId(null)}
+          />
+        </section>
+      </div>
+    );
   }
 
   return (
@@ -209,12 +272,24 @@ function App() {
         {consensus && (
           <>
             <h3>依產業別的多空分布</h3>
-            <IndustrySentimentBars industries={consensus.industry_sentiment} />
+            <SentimentBars items={industryItems} />
+
+            <h3 style={{ marginTop: 20 }}>熱門個股的多空分布</h3>
+            <SentimentBars
+              items={stockItems}
+              onItemClick={(item) => handleSearch(item.stock_id)}
+              emptyHint="最近沒有被意見領袖／新聞明確點名的個股"
+            />
 
             <h3 style={{ marginTop: 20 }}>最新意見／新聞</h3>
             <ConsensusFeed items={consensus.recent_items} />
           </>
         )}
+      </section>
+
+      <section className="panel">
+        <h2>意見領袖</h2>
+        <InfluencerList influencers={influencers} onSelect={handleSelectInfluencer} />
       </section>
 
       <details className="panel panel-collapsible">
@@ -255,11 +330,32 @@ function App() {
             onChange={(e) => setStockId(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSearch()}
           />
-          <button onClick={handleSearch} disabled={loading}>
+          <button onClick={() => handleSearch()} disabled={loading}>
             查詢
           </button>
         </div>
       </section>
+
+      {stockConsensus && (
+        <section className="panel">
+          {stockConsensus.summary ? (
+            <div className="stock-consensus-card">
+              <strong>
+                {stockConsensus.summary.stock_name || stockId}（{stockId}）
+                最近 {stockConsensus.window_days} 天共識：
+              </strong>
+              <span className="count-bullish">看多 {stockConsensus.summary.bullish}</span>
+              <span className="count-bearish">看空 {stockConsensus.summary.bearish}</span>
+              <span className="count-neutral">中性 {stockConsensus.summary.neutral}</span>
+              {stockConsensus.summary.has_divergence && (
+                <span className="divergence-badge">⚠️ 意見分歧</span>
+              )}
+            </div>
+          ) : (
+            <p className="empty-hint">最近沒有意見領袖或新聞明確提到這檔股票</p>
+          )}
+        </section>
+      )}
 
       {flowData && (
         <section className="panel">

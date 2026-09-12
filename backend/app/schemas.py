@@ -135,6 +135,17 @@ class IndustrySentimentOut(BaseModel):
     total: int
 
 
+class StockSentimentOut(BaseModel):
+    stock_id: str
+    stock_name: str | None
+    industry: str | None
+    bullish: int
+    bearish: int
+    neutral: int
+    total: int
+    has_divergence: bool  # 同時有人看多又有人看空
+
+
 class ConsensusItemOut(BaseModel):
     type: str  # "opinion" 或 "news"
     source: str  # 意見領袖名字或新聞來源
@@ -160,4 +171,31 @@ class ConsensusSummaryOut(BaseModel):
     generated_at: datetime
     last_updated: LastUpdatedOut
     industry_sentiment: list[IndustrySentimentOut]
+    stock_sentiment: list[StockSentimentOut]
     recent_items: list[ConsensusItemOut]
+
+
+class StockConsensusOut(BaseModel):
+    window_days: int
+    generated_at: datetime
+    summary: StockSentimentOut | None
+    items: list[ConsensusItemOut]
+
+
+class TimelineOpinionOut(BaseModel):
+    sentiment: str
+    summary: str
+    published_at: datetime | None
+    url: str
+    trend: str | None  # None（第一次講這檔）｜"延續"｜"反轉"
+
+
+class StockTimelineOut(BaseModel):
+    stock_id: str
+    stock_name: str | None
+    opinions: list[TimelineOpinionOut]  # 依時間排序，舊到新
+
+
+class InfluencerTimelineOut(BaseModel):
+    influencer: InfluencerOut
+    stocks: list[StockTimelineOut]

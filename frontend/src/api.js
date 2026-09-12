@@ -70,3 +70,11 @@ export function getConsensus(windowDays = 7) {
 export function fetchIndustry() {
   return post(`/api/stocks/industry/fetch`);
 }
+
+export function getStockConsensus(stockId) {
+  return request(`/api/consensus/stock/${stockId}`);
+}
+
+export function getInfluencerTimeline(influencerId) {
+  return request(`/api/influencers/${influencerId}/timeline`);
+}
