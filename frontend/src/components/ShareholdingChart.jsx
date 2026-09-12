@@ -12,7 +12,7 @@ import {
 const WARN_DROP_THRESHOLD = 2;
 
 function WarnDot({ cx, cy, payload }) {
-  const color = payload.drop >= WARN_DROP_THRESHOLD ? "#dc2626" : "#2563eb";
+  const color = payload.drop >= WARN_DROP_THRESHOLD ? "#b8452f" : "#d97757";
   const r = payload.drop >= WARN_DROP_THRESHOLD ? 5 : 3;
   return <circle cx={cx} cy={cy} r={r} fill={color} stroke="none" />;
 }
@@ -37,7 +37,7 @@ export default function ShareholdingChart({ data }) {
         <Line
           type="monotone"
           dataKey="大戶持股比例"
-          stroke="#2563eb"
+          stroke="#d97757"
           strokeWidth={2}
           dot={<WarnDot />}
         />

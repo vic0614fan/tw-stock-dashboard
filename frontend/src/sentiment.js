@@ -3,7 +3,7 @@ const POSITIVE = new Set(["多", "正面"]);
 const NEGATIVE = new Set(["空", "負面"]);
 
 export function sentimentColor(sentiment) {
-  if (POSITIVE.has(sentiment)) return { bg: "#fee2e2", fg: "#b91c1c" };
-  if (NEGATIVE.has(sentiment)) return { bg: "#dcfce7", fg: "#15803d" };
-  return { bg: "#f3f4f6", fg: "#4b5563" };
+  if (POSITIVE.has(sentiment)) return { bg: "#f7e3dd", fg: "#b8452f" };
+  if (NEGATIVE.has(sentiment)) return { bg: "#e3ebe4", fg: "#3f7d52" };
+  return { bg: "#f0eee5", fg: "#8a8578" };
 }

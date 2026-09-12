@@ -268,24 +268,34 @@ function App() {
         )}
 
         {consensusError && <p className="status">{consensusError}</p>}
-
-        {consensus && (
-          <>
-            <h3>依產業別的多空分布</h3>
-            <SentimentBars items={industryItems} />
-
-            <h3 style={{ marginTop: 20 }}>熱門個股的多空分布</h3>
-            <SentimentBars
-              items={stockItems}
-              onItemClick={(item) => handleSearch(item.stock_id)}
-              emptyHint="最近沒有被意見領袖／新聞明確點名的個股"
-            />
-
-            <h3 style={{ marginTop: 20 }}>最新意見／新聞</h3>
-            <ConsensusFeed items={consensus.recent_items} />
-          </>
-        )}
       </section>
+
+      {consensus && (
+        <>
+          <div className="grid-2col">
+            <section className="panel">
+              <h3>依產業別的多空分布</h3>
+              <SentimentBars items={industryItems} />
+            </section>
+
+            <section className="panel">
+              <h3>熱門個股的多空分布</h3>
+              <SentimentBars
+                items={stockItems}
+                onItemClick={(item) => handleSearch(item.stock_id)}
+                emptyHint="最近沒有被意見領袖／新聞明確點名的個股"
+              />
+            </section>
+          </div>
+
+          <section className="panel">
+            <h3>最新意見／新聞</h3>
+            <div className="scroll-panel">
+              <ConsensusFeed items={consensus.recent_items} />
+            </div>
+          </section>
+        </>
+      )}
 
       <section className="panel">
         <h2>意見領袖</h2>
@@ -357,26 +367,30 @@ function App() {
         </section>
       )}
 
-      {flowData && (
-        <section className="panel">
-          <h2>三大法人買賣超（{stockId}）</h2>
-          {flowData.length > 0 ? (
-            <InstitutionalFlowChart data={flowData} />
-          ) : (
-            <p className="empty-hint">尚無資料</p>
+      {(flowData || chipData) && (
+        <div className="grid-2col">
+          {flowData && (
+            <section className="panel">
+              <h2>三大法人買賣超（{stockId}）</h2>
+              {flowData.length > 0 ? (
+                <InstitutionalFlowChart data={flowData} />
+              ) : (
+                <p className="empty-hint">尚無資料</p>
+              )}
+            </section>
           )}
-        </section>
-      )}
 
-      {chipData && (
-        <section className="panel">
-          <h2>融資融券餘額（{stockId}）</h2>
-          {chipData.length > 0 ? (
-            <ChipDataChart data={chipData} />
-          ) : (
-            <p className="empty-hint">尚無資料</p>
+          {chipData && (
+            <section className="panel">
+              <h2>融資融券餘額（{stockId}）</h2>
+              {chipData.length > 0 ? (
+                <ChipDataChart data={chipData} />
+              ) : (
+                <p className="empty-hint">尚無資料</p>
+              )}
+            </section>
           )}
-        </section>
+        </div>
       )}
 
       {shareholding && (
@@ -390,18 +404,26 @@ function App() {
         </section>
       )}
 
-      {opinions && (
-        <section className="panel">
-          <h2>意見領袖怎麼看（{stockId}）</h2>
-          <OpinionList opinions={opinions} />
-        </section>
-      )}
+      {(opinions || news) && (
+        <div className="grid-2col">
+          {opinions && (
+            <section className="panel">
+              <h2>意見領袖怎麼看（{stockId}）</h2>
+              <div className="scroll-panel">
+                <OpinionList opinions={opinions} />
+              </div>
+            </section>
+          )}
 
-      {news && (
-        <section className="panel">
-          <h2>相關新聞（{stockId}）</h2>
-          <NewsList news={news} />
-        </section>
+          {news && (
+            <section className="panel">
+              <h2>相關新聞（{stockId}）</h2>
+              <div className="scroll-panel">
+                <NewsList news={news} />
+              </div>
+            </section>
+          )}
+        </div>
       )}
     </div>
   );

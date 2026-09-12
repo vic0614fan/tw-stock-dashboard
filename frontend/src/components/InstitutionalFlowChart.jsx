@@ -33,9 +33,9 @@ export default function InstitutionalFlowChart({ data }) {
           labelFormatter={(label) => `日期：${label}`}
         />
         <Legend />
-        <Bar dataKey="外資" stackId="flow" fill="#2563eb" />
-        <Bar dataKey="投信" stackId="flow" fill="#16a34a" />
-        <Bar dataKey="自營商" stackId="flow" fill="#f59e0b" />
+        <Bar dataKey="外資" stackId="flow" fill="#d97757" />
+        <Bar dataKey="投信" stackId="flow" fill="#5b7f6b" />
+        <Bar dataKey="自營商" stackId="flow" fill="#c99a4b" />
       </BarChart>
     </ResponsiveContainer>
   );

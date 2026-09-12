@@ -27,8 +27,8 @@ export default function ChipDataChart({ data }) {
           labelFormatter={(label) => `日期：${label}`}
         />
         <Legend />
-        <Line type="monotone" dataKey="融資餘額" stroke="#dc2626" strokeWidth={2} dot={false} />
-        <Line type="monotone" dataKey="融券餘額" stroke="#7c3aed" strokeWidth={2} dot={false} />
+        <Line type="monotone" dataKey="融資餘額" stroke="#d97757" strokeWidth={2} dot={false} />
+        <Line type="monotone" dataKey="融券餘額" stroke="#7a8b99" strokeWidth={2} dot={false} />
       </LineChart>
     </ResponsiveContainer>
   );
