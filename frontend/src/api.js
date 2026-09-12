@@ -54,3 +54,19 @@ export function scrapeInfluencer(influencerId) {
 export function fetchNews() {
   return post(`/api/news/fetch`);
 }
+
+export function getShareholding(stockId) {
+  return request(`/api/shareholding/${stockId}`);
+}
+
+export function fetchShareholding() {
+  return post(`/api/shareholding/fetch`);
+}
+
+export function getConsensus(windowDays = 7) {
+  return request(`/api/consensus?window_days=${windowDays}`);
+}
+
+export function fetchIndustry() {
+  return post(`/api/stocks/industry/fetch`);
+}

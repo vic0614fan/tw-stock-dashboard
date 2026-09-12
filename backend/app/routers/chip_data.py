@@ -4,9 +4,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.ingest import ingest_chip_data
 from app.models import ChipData, Stock
 from app.schemas import ChipDataOut, ChipDataWithNameOut, FetchResult
-from app.services.twse import NoTradingDataError, fetch_margin_trading
+from app.services.twse import NoTradingDataError
 
 router = APIRouter(prefix="/api/chip-data", tags=["chip-data"])
 
@@ -17,27 +18,11 @@ def fetch_and_store(trade_date: date | None = None, db: Session = Depends(get_db
     if trade_date is None:
         trade_date = date.today()
     try:
-        records = fetch_margin_trading(trade_date)
+        saved = ingest_chip_data(db, trade_date)
     except NoTradingDataError as e:
         raise HTTPException(status_code=404, detail=str(e))
 
-    # 該日期若已抓過，先清掉舊資料再重新寫入，確保重複呼叫是安全的
-    db.query(ChipData).filter(ChipData.date == trade_date).delete()
-
-    for r in records:
-        if not db.get(Stock, r["stock_id"]):
-            db.add(Stock(stock_id=r["stock_id"], name=r["name"]))
-        db.add(
-            ChipData(
-                stock_id=r["stock_id"],
-                date=trade_date,
-                margin_buy_balance=r["margin_buy_balance"],
-                margin_sell_balance=r["margin_sell_balance"],
-            )
-        )
-    db.commit()
-
-    return FetchResult(date=trade_date, records_saved=len(records))
+    return FetchResult(date=trade_date, records_saved=saved)
 
 
 @router.get("", response_model=list[ChipDataWithNameOut])

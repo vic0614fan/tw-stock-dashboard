@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, BigInteger, Date, DateTime, ForeignKey, UniqueConstraint
+from sqlalchemy import Column, String, Integer, BigInteger, Date, DateTime, Float, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -10,9 +10,11 @@ class Stock(Base):
 
     stock_id = Column(String, primary_key=True)
     name = Column(String, nullable=False)
+    industry = Column(String, nullable=True)  # 例如「半導體業」，來自 TWSE 上市公司基本資料
 
     institutional_flows = relationship("InstitutionalFlow", back_populates="stock")
     chip_data = relationship("ChipData", back_populates="stock")
+    shareholding = relationship("ShareholdingDistribution", back_populates="stock")
 
 
 class InstitutionalFlow(Base):
@@ -43,6 +45,21 @@ class ChipData(Base):
     margin_sell_balance = Column(BigInteger, nullable=False)  # 融券今日餘額（張）
 
     stock = relationship("Stock", back_populates="chip_data")
+
+
+class ShareholdingDistribution(Base):
+    __tablename__ = "shareholding_distribution"
+    __table_args__ = (UniqueConstraint("stock_id", "date", name="uq_shareholding_stock_date"),)
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    stock_id = Column(String, ForeignKey("stocks.stock_id"), nullable=False)
+    date = Column(Date, nullable=False)  # 集保每週最後一個營業日
+
+    large_holder_ratio = Column(Float, nullable=False)  # 大戶（1,000張以上）持股佔集保庫存比例 (%)
+    large_holder_count = Column(Integer, nullable=False)  # 大戶人數
+    total_holder_count = Column(Integer, nullable=False)  # 全體股東人數
+
+    stock = relationship("Stock", back_populates="shareholding")
 
 
 class Influencer(Base):

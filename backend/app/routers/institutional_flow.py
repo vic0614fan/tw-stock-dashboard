@@ -4,9 +4,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.ingest import ingest_institutional_flow
 from app.models import InstitutionalFlow, Stock
 from app.schemas import FetchResult, InstitutionalFlowOut, InstitutionalFlowWithNameOut
-from app.services.twse import NoTradingDataError, fetch_institutional_flow
+from app.services.twse import NoTradingDataError
 
 router = APIRouter(prefix="/api/institutional-flow", tags=["institutional-flow"])
 
@@ -17,29 +18,11 @@ def fetch_and_store(trade_date: date | None = None, db: Session = Depends(get_db
     if trade_date is None:
         trade_date = date.today()
     try:
-        records = fetch_institutional_flow(trade_date)
+        saved = ingest_institutional_flow(db, trade_date)
     except NoTradingDataError as e:
         raise HTTPException(status_code=404, detail=str(e))
 
-    # 該日期若已抓過，先清掉舊資料再重新寫入，確保重複呼叫是安全的
-    db.query(InstitutionalFlow).filter(InstitutionalFlow.date == trade_date).delete()
-
-    for r in records:
-        if not db.get(Stock, r["stock_id"]):
-            db.add(Stock(stock_id=r["stock_id"], name=r["name"]))
-        db.add(
-            InstitutionalFlow(
-                stock_id=r["stock_id"],
-                date=trade_date,
-                foreign_net=r["foreign_net"],
-                trust_net=r["trust_net"],
-                dealer_net=r["dealer_net"],
-                total_net=r["total_net"],
-            )
-        )
-    db.commit()
-
-    return FetchResult(date=trade_date, records_saved=len(records))
+    return FetchResult(date=trade_date, records_saved=saved)
 
 
 @router.get("", response_model=list[InstitutionalFlowWithNameOut])

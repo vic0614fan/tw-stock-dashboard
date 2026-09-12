@@ -6,10 +6,14 @@ MODEL = "claude-sonnet-4-5"
 
 _CLASSIFY_TOOL = {
     "name": "classify_opinion",
-    "description": "分析一篇台股意見領袖的貼文，判斷多空立場、摘要理由、標記提到的股票代號",
+    "description": "判斷一篇意見領袖的貼文/影片/文章是否明確跟具體台股個股有關，若有關則判斷多空立場、摘要理由、標記提到的股票代號",
     "input_schema": {
         "type": "object",
         "properties": {
+            "is_stock_relevant": {
+                "type": "boolean",
+                "description": "內容是否明確跟一檔或多檔具體上市股票有關（理財知識、銀行/信用卡評測、大盤總經閒聊但沒點名個股都算 false）",
+            },
             "sentiment": {
                 "type": "string",
                 "enum": ["多", "空", "中性"],
@@ -32,7 +36,7 @@ _CLASSIFY_TOOL = {
                 },
             },
         },
-        "required": ["sentiment", "summary", "stocks"],
+        "required": ["is_stock_relevant", "sentiment", "summary", "stocks"],
     },
 }
 

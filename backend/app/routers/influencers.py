@@ -2,10 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
-from app.models import Influencer, OpinionData, OpinionStock
+from app.ingest import ingest_influencer_opinions
+from app.models import Influencer, OpinionData
 from app.schemas import InfluencerCreate, InfluencerOut, OpinionDataOut, ScrapeResult
-from app.services.llm_classifier import LLMNotConfiguredError, classify_opinion
-from app.services.threads_scraper import scrape_threads_posts
+from app.services.llm_classifier import LLMNotConfiguredError
 
 router = APIRouter(prefix="/api/influencers", tags=["influencers"])
 
@@ -30,43 +30,15 @@ def scrape_influencer(influencer_id: int, limit: int = 10, db: Session = Depends
     influencer = db.get(Influencer, influencer_id)
     if not influencer:
         raise HTTPException(status_code=404, detail=f"找不到 influencer id={influencer_id}")
-    if influencer.platform != "threads":
-        raise HTTPException(status_code=400, detail=f"目前只支援 threads，這位是 {influencer.platform}")
+    if influencer.platform not in ("threads", "youtube", "blog"):
+        raise HTTPException(status_code=400, detail=f"不支援的平台：{influencer.platform}")
 
-    posts = scrape_threads_posts(influencer.handle, limit=limit)
+    try:
+        result = ingest_influencer_opinions(db, influencer, limit=limit)
+    except LLMNotConfiguredError as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-    saved = 0
-    skipped = 0
-    for post in posts:
-        if db.query(OpinionData).filter(OpinionData.source_url == post["url"]).first():
-            skipped += 1
-            continue
-        if not post["content"]:
-            continue
-
-        try:
-            result = classify_opinion(post["content"])
-        except LLMNotConfiguredError as e:
-            raise HTTPException(status_code=500, detail=str(e))
-
-        opinion = OpinionData(
-            influencer_id=influencer.id,
-            source_url=post["url"],
-            published_at=post["published_at"],
-            raw_content=post["content"],
-            sentiment=result["sentiment"],
-            summary=result["summary"],
-        )
-        db.add(opinion)
-        db.flush()  # 取得 opinion.id 供下面的 OpinionStock 使用
-
-        for s in result["stocks"]:
-            db.add(OpinionStock(opinion_id=opinion.id, stock_id=s["stock_id"]))
-
-        saved += 1
-
-    db.commit()
-    return ScrapeResult(posts_found=len(posts), opinions_saved=saved, opinions_skipped_existing=skipped)
+    return ScrapeResult(**result)
 
 
 @router.get("/{influencer_id}/opinions", response_model=list[OpinionDataOut])

@@ -36,6 +36,20 @@ class FetchResult(BaseModel):
     records_saved: int
 
 
+class ShareholdingDistributionOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    stock_id: str
+    date: date
+    large_holder_ratio: float
+    large_holder_count: int
+    total_holder_count: int
+
+
+class ShareholdingDistributionWithNameOut(ShareholdingDistributionOut):
+    name: str
+
+
 class InfluencerCreate(BaseModel):
     name: str
     platform: str
@@ -78,6 +92,7 @@ class ScrapeResult(BaseModel):
     posts_found: int
     opinions_saved: int
     opinions_skipped_existing: int
+    opinions_skipped_not_relevant: int
 
 
 class NewsStockOut(BaseModel):
@@ -106,3 +121,43 @@ class FetchNewsResult(BaseModel):
     items_skipped_duplicate_url: int
     items_skipped_similar_title: int
     items_skipped_not_stock_relevant: int
+
+
+class IndustryFetchResult(BaseModel):
+    stocks_updated: int
+
+
+class IndustrySentimentOut(BaseModel):
+    industry: str
+    bullish: int
+    bearish: int
+    neutral: int
+    total: int
+
+
+class ConsensusItemOut(BaseModel):
+    type: str  # "opinion" 或 "news"
+    source: str  # 意見領袖名字或新聞來源
+    sentiment: str
+    summary: str
+    stock_id: str | None
+    stock_name: str | None
+    industry: str | None
+    published_at: datetime | None
+    url: str
+
+
+class LastUpdatedOut(BaseModel):
+    institutional_flow: datetime | None
+    chip_data: datetime | None
+    shareholding: datetime | None
+    opinions: datetime | None
+    news: datetime | None
+
+
+class ConsensusSummaryOut(BaseModel):
+    window_days: int
+    generated_at: datetime
+    last_updated: LastUpdatedOut
+    industry_sentiment: list[IndustrySentimentOut]
+    recent_items: list[ConsensusItemOut]
