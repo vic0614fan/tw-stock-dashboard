@@ -146,6 +146,21 @@ class StockSentimentOut(BaseModel):
     has_divergence: bool  # 同時有人看多又有人看空
 
 
+class IndustryFlowOut(BaseModel):
+    industry: str
+    foreign_net_lots: int  # 外資買賣超（張）
+    trust_net_lots: int  # 投信買賣超（張）
+    dealer_net_lots: int  # 自營商買賣超（張）
+    total_net_lots: int  # 三大法人合計買賣超（張）
+
+
+class IndustryFlowSummaryOut(BaseModel):
+    window_days: int
+    trading_dates: list[date]  # 實際有資料、被納入統計的交易日
+    generated_at: datetime
+    industries: list[IndustryFlowOut]
+
+
 class ConsensusItemOut(BaseModel):
     type: str  # "opinion" 或 "news"
     source: str  # 意見領袖名字或新聞來源

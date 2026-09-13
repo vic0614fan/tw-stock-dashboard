@@ -18,6 +18,8 @@ from app.models import (
 from app.schemas import (
     ConsensusItemOut,
     ConsensusSummaryOut,
+    IndustryFlowOut,
+    IndustryFlowSummaryOut,
     IndustrySentimentOut,
     LastUpdatedOut,
     StockConsensusOut,
@@ -209,4 +211,66 @@ def get_stock_consensus(
         generated_at=datetime.utcnow(),
         summary=summary,
         items=items,
+    )
+
+
+@router.get("/industry-flow", response_model=IndustryFlowSummaryOut)
+def get_industry_flow(
+    window_days: int = Query(5, ge=1, le=20, description="統計最近幾個「交易日」（依實際有資料的日期取，不是日曆天）"),
+    db: Session = Depends(get_db),
+):
+    """主力資金流向（依產業）：把三大法人買賣超依股票的產業別加總，看主力最近在買哪些
+    產業、賣哪些產業。跟 get_consensus 的產業多空不同來源——這裡是三大法人的真實買賣超金額，
+    不是意見領袖/新聞的主觀情緒。
+
+    用「最近 N 個有資料的交易日」而不是日曆天數，避免週末/假日把交易日沖淡。
+    """
+    trading_dates = [
+        row[0]
+        for row in (
+            db.query(InstitutionalFlow.date)
+            .distinct()
+            .order_by(InstitutionalFlow.date.desc())
+            .limit(window_days)
+            .all()
+        )
+    ]
+    if not trading_dates:
+        return IndustryFlowSummaryOut(
+            window_days=window_days, trading_dates=[], generated_at=datetime.utcnow(), industries=[]
+        )
+
+    rows = (
+        db.query(
+            Stock.industry,
+            func.sum(InstitutionalFlow.foreign_net).label("foreign_net"),
+            func.sum(InstitutionalFlow.trust_net).label("trust_net"),
+            func.sum(InstitutionalFlow.dealer_net).label("dealer_net"),
+            func.sum(InstitutionalFlow.total_net).label("total_net"),
+        )
+        .join(Stock, Stock.stock_id == InstitutionalFlow.stock_id)
+        .filter(InstitutionalFlow.date.in_(trading_dates))
+        .filter(Stock.industry.isnot(None))
+        .group_by(Stock.industry)
+        .all()
+    )
+
+    # TWSE 原始單位是「股」，換算成「張」(1張=1000股) 比較符合台股慣用的顯示方式
+    industries = [
+        IndustryFlowOut(
+            industry=r.industry,
+            foreign_net_lots=round(r.foreign_net / 1000),
+            trust_net_lots=round(r.trust_net / 1000),
+            dealer_net_lots=round(r.dealer_net / 1000),
+            total_net_lots=round(r.total_net / 1000),
+        )
+        for r in rows
+    ]
+    industries.sort(key=lambda x: x.total_net_lots, reverse=True)
+
+    return IndustryFlowSummaryOut(
+        window_days=window_days,
+        trading_dates=sorted(trading_dates),
+        generated_at=datetime.utcnow(),
+        industries=industries,
     )

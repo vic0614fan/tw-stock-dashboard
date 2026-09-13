@@ -428,3 +428,64 @@ details.panel-collapsible .controls {
   font-weight: 600;
   font-size: 0.95rem;
 }
+
+.flow-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.flow-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.flow-name {
+  width: 110px;
+  flex-shrink: 0;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.flow-bar-track {
+  flex: 1;
+  position: relative;
+  height: 14px;
+  background: var(--surface-alt);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.flow-bar-center {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--border);
+}
+
+.flow-bar-fill {
+  position: absolute;
+  top: 0;
+  height: 100%;
+}
+
+.flow-bar-fill.buy {
+  background: var(--bullish);
+  border-radius: 0 3px 3px 0;
+}
+
+.flow-bar-fill.sell {
+  background: var(--bearish);
+  border-radius: 3px 0 0 3px;
+}
+
+.flow-value {
+  flex-shrink: 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  width: 130px;
+  text-align: right;
+}

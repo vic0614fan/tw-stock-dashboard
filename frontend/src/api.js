@@ -78,3 +78,7 @@ export function getStockConsensus(stockId) {
 export function getInfluencerTimeline(influencerId) {
   return request(`/api/influencers/${influencerId}/timeline`);
 }
+
+export function getIndustryFlow(windowDays = 5) {
+  return request(`/api/consensus/industry-flow?window_days=${windowDays}`);
+}

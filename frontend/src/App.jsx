@@ -6,6 +6,7 @@ import ShareholdingChart from "./components/ShareholdingChart";
 import OpinionList from "./components/OpinionList";
 import NewsList from "./components/NewsList";
 import SentimentBars from "./components/SentimentBars";
+import IndustryFlowBars from "./components/IndustryFlowBars";
 import ConsensusFeed from "./components/ConsensusFeed";
 import InfluencerList from "./components/InfluencerList";
 import InfluencerProfile from "./components/InfluencerProfile";
@@ -17,6 +18,7 @@ import {
   fetchShareholding,
   getChipData,
   getConsensus,
+  getIndustryFlow,
   getInfluencerTimeline,
   getInstitutionalFlow,
   getNews,
@@ -61,6 +63,9 @@ function App() {
   const [consensus, setConsensus] = useState(null);
   const [consensusError, setConsensusError] = useState("");
 
+  const [industryFlow, setIndustryFlow] = useState(null);
+  const [industryFlowError, setIndustryFlowError] = useState("");
+
   const [influencers, setInfluencers] = useState([]);
   const [activeInfluencerId, setActiveInfluencerId] = useState(null);
   const [influencerTimeline, setInfluencerTimeline] = useState(null);
@@ -75,8 +80,19 @@ function App() {
     }
   }
 
+  async function loadIndustryFlow() {
+    try {
+      const data = await getIndustryFlow(5);
+      setIndustryFlow(data);
+      setIndustryFlowError("");
+    } catch (e) {
+      setIndustryFlowError(`主力資金流向載入失敗：${e.message}`);
+    }
+  }
+
   useEffect(() => {
     loadConsensus();
+    loadIndustryFlow();
     listInfluencers().then(setInfluencers).catch(() => {});
   }, []);
 
@@ -91,7 +107,7 @@ function App() {
       setStatus(
         `抓取完成：資金流向 ${flowResult.records_saved} 檔、籌碼面 ${chipResult.records_saved} 檔`
       );
-      await loadConsensus();
+      await Promise.all([loadConsensus(), loadIndustryFlow()]);
     } catch (e) {
       setStatus(`抓取失敗：${e.message}`);
     } finally {
@@ -287,6 +303,23 @@ function App() {
               />
             </section>
           </div>
+
+          <section className="panel">
+            <div className="home-header">
+              <h3 style={{ margin: 0 }}>主力資金流向（依產業）</h3>
+              {industryFlow && (
+                <span className="section-meta" style={{ margin: 0 }}>
+                  三大法人買賣超合計｜最近 {industryFlow.trading_dates.length} 個交易日
+                  {industryFlow.trading_dates.length > 0 &&
+                    `（${industryFlow.trading_dates[0]} ~ ${
+                      industryFlow.trading_dates[industryFlow.trading_dates.length - 1]
+                    }）`}
+                </span>
+              )}
+            </div>
+            {industryFlowError && <p className="status">{industryFlowError}</p>}
+            {industryFlow && <IndustryFlowBars industries={industryFlow.industries} />}
+          </section>
 
           <section className="panel">
             <h3>最新意見／新聞</h3>
