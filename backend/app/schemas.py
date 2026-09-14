@@ -3,6 +3,14 @@ from datetime import date, datetime
 from pydantic import BaseModel, ConfigDict
 
 
+class StockOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    stock_id: str
+    name: str
+    industry: str | None
+
+
 class InstitutionalFlowOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -161,6 +169,20 @@ class IndustryFlowSummaryOut(BaseModel):
     industries: list[IndustryFlowOut]
 
 
+class ShareholdingFlowOut(BaseModel):
+    industry: str
+    avg_ratio: float  # 該產業目前大戶持股比例平均值 (%)
+    avg_change: float | None  # 跟前一週比較的平均變化（百分點），只有兩週以上資料才有值
+
+
+class ShareholdingFlowSummaryOut(BaseModel):
+    mode: str  # "level"（只有一週資料，顯示目前比例）或 "change"（兩週以上，顯示週對週變化）
+    latest_date: date | None
+    previous_date: date | None
+    generated_at: datetime
+    industries: list[ShareholdingFlowOut]
+
+
 class ConsensusItemOut(BaseModel):
     type: str  # "opinion" 或 "news"
     source: str  # 意見領袖名字或新聞來源
@@ -174,9 +196,11 @@ class ConsensusItemOut(BaseModel):
 
 
 class LastUpdatedOut(BaseModel):
-    institutional_flow: datetime | None
-    chip_data: datetime | None
-    shareholding: datetime | None
+    # 資金流向/籌碼面/大戶持股本來就是「日」為單位的資料，用 date 而不是 datetime，
+    # 避免前端顯示出一個假的「00:00」時間，看起來像是半夜更新的
+    institutional_flow: date | None
+    chip_data: date | None
+    shareholding: date | None
     opinions: datetime | None
     news: datetime | None
 

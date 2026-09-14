@@ -82,3 +82,11 @@ export function getInfluencerTimeline(influencerId) {
 export function getIndustryFlow(windowDays = 5) {
   return request(`/api/consensus/industry-flow?window_days=${windowDays}`);
 }
+
+export function getShareholdingFlow() {
+  return request(`/api/consensus/shareholding`);
+}
+
+export function getStocksByIndustry(industry) {
+  return request(`/api/stocks?industry=${encodeURIComponent(industry)}`);
+}

@@ -1,6 +1,6 @@
 // 主力資金流向（依產業）：以零為中心的雙向橫條圖，買超（正）往右、賣超（負）往左，
 // 跟 SentimentBars 的「多空共識」不是同一種資料，色彩語意沿用同一套（買超=紅、賣超=綠）
-export default function IndustryFlowBars({ industries }) {
+export default function IndustryFlowBars({ industries, onItemClick }) {
   if (industries.length === 0) {
     return <p className="empty-hint">尚無資金流向資料，請先抓取盤後資料</p>;
   }
@@ -13,7 +13,11 @@ export default function IndustryFlowBars({ industries }) {
         const pct = (Math.abs(i.total_net_lots) / maxAbs) * 50;
         const isBuy = i.total_net_lots >= 0;
         return (
-          <div className="flow-row" key={i.industry}>
+          <div
+            className={`flow-row${onItemClick ? " clickable" : ""}`}
+            key={i.industry}
+            onClick={onItemClick ? () => onItemClick(i.industry) : undefined}
+          >
             <span className="flow-name">{i.industry}</span>
             <div className="flow-bar-track">
               <div className="flow-bar-center" />

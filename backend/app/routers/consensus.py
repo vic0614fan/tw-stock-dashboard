@@ -1,4 +1,4 @@
-from datetime import date, datetime, time, timedelta
+from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func
@@ -22,6 +22,8 @@ from app.schemas import (
     IndustryFlowSummaryOut,
     IndustrySentimentOut,
     LastUpdatedOut,
+    ShareholdingFlowOut,
+    ShareholdingFlowSummaryOut,
     StockConsensusOut,
     StockSentimentOut,
 )
@@ -44,12 +46,6 @@ def _bucket(sentiment: str) -> str:
     if sentiment in _BEARISH:
         return "bearish"
     return "neutral"
-
-
-def _date_to_datetime(d: date | None) -> datetime | None:
-    if d is None:
-        return None
-    return datetime.combine(d, time.min)
 
 
 def _collect_items(db: Session, cutoff: datetime, stock_id: str | None = None) -> list[ConsensusItemOut]:
@@ -163,9 +159,9 @@ def get_consensus(
         return db.query(func.max(col)).select_from(model).scalar()
 
     last_updated = LastUpdatedOut(
-        institutional_flow=_date_to_datetime(_max(InstitutionalFlow, InstitutionalFlow.date)),
-        chip_data=_date_to_datetime(_max(ChipData, ChipData.date)),
-        shareholding=_date_to_datetime(_max(ShareholdingDistribution, ShareholdingDistribution.date)),
+        institutional_flow=_max(InstitutionalFlow, InstitutionalFlow.date),
+        chip_data=_max(ChipData, ChipData.date),
+        shareholding=_max(ShareholdingDistribution, ShareholdingDistribution.date),
         opinions=_max(OpinionData, OpinionData.scraped_at),
         news=_max(NewsData, NewsData.scraped_at),
     )
@@ -271,6 +267,90 @@ def get_industry_flow(
     return IndustryFlowSummaryOut(
         window_days=window_days,
         trading_dates=sorted(trading_dates),
+        generated_at=datetime.utcnow(),
+        industries=industries,
+    )
+
+
+@router.get("/shareholding", response_model=ShareholdingFlowSummaryOut)
+def get_shareholding_flow(db: Session = Depends(get_db)):
+    """大戶持股比例依產業加總：TDCC 資料每週才更新一次，資料庫裡只有一週快照時顯示
+    「目前比例排行」，累積到兩週以上快照後自動改顯示「週對週增減」的雙向橫條圖。
+    """
+    dates = [
+        row[0]
+        for row in (
+            db.query(ShareholdingDistribution.date)
+            .distinct()
+            .order_by(ShareholdingDistribution.date.desc())
+            .limit(2)
+            .all()
+        )
+    ]
+    if not dates:
+        return ShareholdingFlowSummaryOut(
+            mode="level", latest_date=None, previous_date=None, generated_at=datetime.utcnow(), industries=[]
+        )
+
+    latest_date = dates[0]
+    previous_date = dates[1] if len(dates) > 1 else None
+
+    latest_rows = (
+        db.query(Stock.industry, ShareholdingDistribution.stock_id, ShareholdingDistribution.large_holder_ratio)
+        .join(Stock, Stock.stock_id == ShareholdingDistribution.stock_id)
+        .filter(ShareholdingDistribution.date == latest_date)
+        .filter(Stock.industry.isnot(None))
+        .all()
+    )
+
+    if previous_date is None:
+        industry_ratios: dict[str, list[float]] = {}
+        for industry, _stock_id, ratio in latest_rows:
+            industry_ratios.setdefault(industry, []).append(ratio)
+        industries = [
+            ShareholdingFlowOut(industry=industry, avg_ratio=sum(ratios) / len(ratios), avg_change=None)
+            for industry, ratios in industry_ratios.items()
+        ]
+        industries.sort(key=lambda x: x.avg_ratio, reverse=True)
+        return ShareholdingFlowSummaryOut(
+            mode="level",
+            latest_date=latest_date,
+            previous_date=None,
+            generated_at=datetime.utcnow(),
+            industries=industries,
+        )
+
+    previous_by_stock = {
+        stock_id: ratio
+        for stock_id, ratio in (
+            db.query(ShareholdingDistribution.stock_id, ShareholdingDistribution.large_holder_ratio)
+            .filter(ShareholdingDistribution.date == previous_date)
+            .all()
+        )
+    }
+
+    industry_data: dict[str, dict[str, list[float]]] = {}
+    for industry, stock_id, ratio in latest_rows:
+        if stock_id not in previous_by_stock:
+            continue
+        entry = industry_data.setdefault(industry, {"ratios": [], "changes": []})
+        entry["ratios"].append(ratio)
+        entry["changes"].append(ratio - previous_by_stock[stock_id])
+
+    industries = [
+        ShareholdingFlowOut(
+            industry=industry,
+            avg_ratio=sum(d["ratios"]) / len(d["ratios"]),
+            avg_change=sum(d["changes"]) / len(d["changes"]),
+        )
+        for industry, d in industry_data.items()
+    ]
+    industries.sort(key=lambda x: x.avg_change, reverse=True)
+
+    return ShareholdingFlowSummaryOut(
+        mode="change",
+        latest_date=latest_date,
+        previous_date=previous_date,
         generated_at=datetime.utcnow(),
         industries=industries,
     )
